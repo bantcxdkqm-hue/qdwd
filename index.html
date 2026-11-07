@@ -1,0 +1,851 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lucid Cart – Nhận diện ma túy núp bóng</title>
+<meta name="description" content="Trò chơi mô phỏng: chọn món an toàn, nhận diện 5 dạng ma túy núp bóng phổ biến hiện nay.">
+<meta name="theme-color" content="#16202A">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<style>
+:root{
+  --paper:#EEF1F4; --card:#FFFFFF; --ink:#16202A; --muted:#566170; --line:#D3DAE1;
+  --tag:#FFD23F; --tag-ink:#1B1B12; --danger:#C42537; --safe:#17804F; --focus:#1F5FBF;
+  --radius:14px; color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root{--paper:#0E141A; --card:#17202A; --ink:#E7EDF2; --muted:#9AA6B3; --line:#2A3642;
+        --danger:#FF6170; --safe:#3BC487; --focus:#7FB0FF; color-scheme:dark}
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--paper);color:var(--ink)}
+body{font-family:'Be Vietnam Pro',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+  font-size:16px;line-height:1.55;min-height:100vh;
+  padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
+#app{max-width:560px;margin:0 auto;padding:20px 18px 48px}
+.screen[hidden]{display:none}
+h1{font-size:clamp(2.8rem,13vw,4rem);line-height:.95;font-weight:800;letter-spacing:-.035em;margin:.1em 0 .25em}
+h2{font-size:1.45rem;line-height:1.25;font-weight:800;letter-spacing:-.01em;margin:.4em 0 .5em}
+h3{font-size:1.05rem;line-height:1.3;font-weight:700;margin:1.1em 0 .4em}
+h1:focus,h2:focus{outline:none}
+p{margin:.55em 0}
+ul{padding-left:1.2em}
+li{margin:.35em 0}
+.muted{color:var(--muted)}
+.small{font-size:.875rem}
+:focus-visible{outline:3px solid var(--focus);outline-offset:3px}
+
+.btn{display:flex;align-items:center;justify-content:center;width:100%;min-height:50px;margin:14px 0 0;
+  padding:.7em 1.3em;border-radius:999px;border:2px solid var(--ink);background:var(--ink);color:var(--paper);
+  font:inherit;font-weight:700;text-decoration:none;cursor:pointer}
+.btn.secondary{background:transparent;color:var(--ink)}
+.btn:disabled{opacity:.5;cursor:progress}
+.back{background:none;border:0;color:var(--muted);font:inherit;font-weight:600;padding:8px 0;cursor:pointer}
+
+.banner{background:var(--danger);color:#fff;font-weight:600;padding:10px 14px;border-radius:10px;margin-bottom:14px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;margin:14px 0}
+.error{color:var(--danger);font-weight:600;min-height:1.4em;margin:.4em 0 0}
+
+/* Form */
+.field{display:block;margin:16px 0}
+.field > span{display:block;font-weight:600;margin-bottom:6px}
+.hint{display:block;font-size:.85rem;color:var(--muted);margin-top:4px}
+input[type=text],select{width:100%;min-height:50px;padding:.6em .8em;border-radius:10px;border:1.5px solid var(--line);
+  background:var(--card);color:var(--ink);font:inherit}
+.code-input{font-size:1.6rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;text-align:center;font-variant-numeric:tabular-nums}
+.check{display:flex;gap:12px;align-items:flex-start;margin:14px 0;cursor:pointer}
+.check input{width:22px;height:22px;margin:2px 0 0;flex:none;accent-color:var(--ink)}
+
+/* Nhãn giá – điểm nhấn của giao diện */
+.tag{--hole:var(--paper);position:relative;display:inline-block;background:var(--tag);color:var(--tag-ink);
+  font-weight:800;line-height:1.2;padding:.32em .75em .32em 1.4em;
+  clip-path:polygon(13px 0,100% 0,100% 100%,13px 100%,0 50%);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tag::before{content:"";position:absolute;left:9px;top:50%;width:7px;height:7px;margin-top:-3.5px;border-radius:50%;background:var(--hole)}
+.hero-tag{margin:10px 0 22px;transform:rotate(-3deg);transform-origin:left center}
+.hero-tag .tag{font-size:1.25rem}
+.kicker{font-weight:600;color:var(--muted);margin:8px 0 0}
+.lead{font-size:1.08rem}
+.rules{list-style:none;padding:0;margin:18px 0 6px;border-top:1px dashed var(--line)}
+.rules li{padding:10px 0;margin:0;border-bottom:1px dashed var(--line)}
+
+/* Màn hình chơi */
+.hud{display:flex;align-items:center;justify-content:space-between;gap:10px;font-weight:700;font-size:.95rem;
+  padding-bottom:12px;border-bottom:1px dashed var(--line);font-variant-numeric:tabular-nums}
+.lives{display:flex;gap:4px;align-items:center}
+.lives svg{width:24px;height:24px}
+.chip{display:inline-block;font-size:.82rem;font-weight:600;padding:.2em .75em;border-radius:999px;border:1px solid var(--line);color:var(--muted);margin:16px 0 0}
+.quote{background:var(--card);border:1px solid var(--line);border-radius:4px 16px 16px 16px;padding:12px 14px;margin:8px 0 6px}
+.shelf{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0 0;padding-bottom:14px;border-bottom:6px solid var(--line)}
+.item{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:10px;text-align:left;
+  background:var(--card);color:var(--ink);border:1.5px solid var(--line);border-radius:var(--radius);
+  padding:16px 12px 12px;min-height:178px;font:inherit;cursor:pointer}
+.item:hover{border-color:var(--muted)}
+.item .ico{width:46px;height:46px}
+.item .label{font-weight:600;line-height:1.3;font-size:.95rem}
+.item .tag{--hole:var(--card);position:absolute;top:10px;right:-6px;transform:rotate(4deg);font-size:.78rem;max-width:62%;overflow:hidden;text-overflow:ellipsis}
+.item .seen{font-size:.78rem;color:var(--muted);margin-top:auto}
+.item.is-seen{border-style:dashed}
+.shelf.busy .item{pointer-events:none;opacity:.6}
+
+/* Hộp thoại xem kỹ */
+dialog{border:0;border-radius:22px 22px 0 0;padding:22px 20px calc(22px + env(safe-area-inset-bottom,0px));
+  width:100%;max-width:560px;margin:auto auto 0;background:var(--card);color:var(--ink)}
+dialog::backdrop{background:rgba(8,12,16,.6)}
+dialog .ico{width:56px;height:56px}
+dialog .tag{--hole:var(--card)}
+.d-actions{display:grid;gap:0}
+
+/* Kết quả từng tình huống */
+.verdict{padding:10px 0 2px}
+.verdict.ok h2{color:var(--safe)}
+.verdict.bad h2{color:var(--danger)}
+.story{font-size:1.12rem;line-height:1.6}
+.src{font-size:.82rem;color:var(--muted)}
+.help{border-left:4px solid var(--danger);padding:6px 0 6px 12px;margin:16px 0}
+
+/* Hóa đơn hoàn thành */
+.receipt{position:relative;background:var(--card);border:1px solid var(--line);border-bottom:0;border-radius:8px 8px 0 0;
+  padding:22px 20px 26px;margin:10px 0 26px}
+.receipt::after{content:"";position:absolute;left:-1px;right:-1px;bottom:-12px;height:12px;
+  background:linear-gradient(-45deg,transparent 8px,var(--card) 0) 0 0/16px 12px repeat-x,
+             linear-gradient(45deg,transparent 8px,var(--card) 0) 0 0/16px 12px repeat-x}
+.r-head{font-weight:800;letter-spacing:-.02em;margin:0;color:var(--muted)}
+.r-lines{margin:14px 0;border-top:1px dashed var(--line)}
+.r-lines div{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px dashed var(--line)}
+.r-lines dt{color:var(--muted)}
+.r-lines dd{margin:0;font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+.barcode{color:var(--ink);height:64px;margin:16px 0 6px}
+.barcode svg{width:100%;height:100%;display:block}
+.r-code{font-size:1.7rem;font-weight:800;letter-spacing:.08em;text-align:center;margin:4px 0;font-variant-numeric:tabular-nums}
+
+.agenda{list-style:none;padding:0;margin:10px 0 4px}
+.agenda li{display:grid;grid-template-columns:4em 1fr;gap:8px;padding:7px 0;margin:0;border-top:1px dashed var(--line)}
+.agenda li span{font-weight:700;font-variant-numeric:tabular-nums}
+
+.flyer{display:block;width:100%;height:auto;border-radius:10px;border:1px solid var(--line);margin:14px 0 0}
+
+/* Hiệu ứng khi chọn sai (tối đa ~4 giây, không nhấp nháy quá 3 lần/giây) */
+#fx{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+#fx[hidden]{display:none}
+.fx-text{color:#fff;font-size:clamp(1.5rem,7vw,2.2rem);font-weight:800;text-align:center;margin:0;text-shadow:0 2px 14px rgba(0,0,0,.7);font-variant-numeric:tabular-nums}
+.fx-skip{position:absolute;right:20px;bottom:calc(24px + env(safe-area-inset-bottom,0px));min-height:44px;padding:.5em 1.2em;
+  border-radius:999px;border:1.5px solid #fff;background:rgba(0,0,0,.45);color:#fff;font:inherit;font-weight:700;cursor:pointer}
+.fx-static{background:rgba(8,12,16,.92)}
+.fx-1{animation:fx-dim 3.6s ease-in forwards}
+@keyframes fx-dim{from{background:rgba(8,12,16,0);backdrop-filter:blur(0);-webkit-backdrop-filter:blur(0)}
+  to{background:rgba(8,12,16,.86);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}}
+.app-1{animation:fx-shake .5s ease-in-out 1.2s 2}
+@keyframes fx-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+.fx-2{background:rgba(8,12,16,.35);animation:fx-pulse .8s ease-in-out infinite}
+@keyframes fx-pulse{0%,100%{box-shadow:inset 0 0 0 0 rgba(200,30,50,0)}50%{box-shadow:inset 0 0 90px 24px rgba(200,30,50,.7)}}
+.app-2{animation:fx-tilt 2s ease-in-out 2}
+@keyframes fx-tilt{0%,100%{transform:none}30%{transform:rotate(-3deg) translateX(-8px)}70%{transform:rotate(3deg) translateX(8px)}}
+.fx-3a{animation:fx-party 4s linear forwards}
+@keyframes fx-party{0%{background:rgba(190,40,160,.55)}22%{background:rgba(40,160,220,.55)}44%{background:rgba(235,195,40,.55)}
+  64%{background:rgba(190,40,160,.6)}76%{background:rgba(0,0,0,.7)}82%,100%{background:#000}}
+.fx-3b{animation:fx-black 2s ease-in forwards}
+@keyframes fx-black{from{background:rgba(0,0,0,0)}to{background:#000}}
+.fx-3b .fx-text{opacity:0;animation:fx-in .6s 2.2s forwards}
+@keyframes fx-in{to{opacity:1}}
+.fx-4a{background:rgba(8,12,16,.82);animation:fx-clear .6s 1.6s forwards}
+@keyframes fx-clear{to{background:rgba(8,12,16,.2);box-shadow:inset 0 0 70px 16px rgba(200,30,50,.5)}}
+.fx-4a .fx-text{animation:fx-out .4s 1.5s forwards}
+@keyframes fx-out{to{opacity:0}}
+.app-4a{animation:fx-skew 1.1s ease-in-out 1.8s 2}
+@keyframes fx-skew{0%,100%{transform:none}50%{transform:skewX(7deg) scale(1.02)}}
+.fx-4b{background:rgba(8,12,16,.3)}
+.app-4b{animation:fx-hue 4s linear}
+@keyframes fx-hue{from{filter:hue-rotate(0deg) saturate(1)}to{filter:hue-rotate(300deg) saturate(2.4)}}
+.fx-5{animation:fx-heat 4s ease-in forwards}
+@keyframes fx-heat{from{background:rgba(190,25,25,0)}to{background:rgba(160,18,18,.84)}}
+.app-5{animation:fx-beat .45s ease-in-out infinite}
+@keyframes fx-beat{0%,100%{transform:scale(1)}50%{transform:scale(1.015)}}
+@media (prefers-reduced-motion:reduce){
+  .hero-tag{transform:none}
+  [class^="app-"],[class*=" app-"]{animation:none!important}
+}
+@media (min-width:560px){ .item{min-height:190px} }
+</style>
+</head>
+<body>
+<main id="app">
+  <p class="banner" id="cfg-warning" hidden>Chưa kết nối máy chủ. BTC cần điền SUPABASE_URL và SUPABASE_ANON_KEY trong tệp config.js.</p>
+
+  <!-- Trang chủ -->
+  <section id="s-home" class="screen">
+    <p class="kicker">Trò chơi mô phỏng nhận diện ma túy núp bóng</p>
+    <h1>Lucid Cart</h1>
+    <div class="hero-tag" aria-hidden="true"><span class="tag">Cứ 4 món, có 1 món là ma túy</span></div>
+    <p class="lead">Bạn đi mua đồ ở vỉa hè, tiệm tạp hóa, quán nước. Mỗi lần có 4 món, trong đó 1 món là ma túy ngụy trang. Chọn được món an toàn ở đủ 5 dạng ma túy là hoàn thành.</p>
+    <ul class="rules">
+      <li><strong>2 mạng.</strong> Được chọn sai 1 lần; lần sai thứ hai là kết thúc lượt chơi.</li>
+      <li><strong>Xem kỹ trước khi mua.</strong> Chạm vào món để đọc nhãn, giá và lời mời chào.</li>
+      <li><strong>Hoàn thành</strong> để nhận mã rút thăm và được ghi nhận MSSV.</li>
+    </ul>
+    <button class="btn" type="button" data-go="s-ticket">Nhập mã vé</button>
+    <p class="muted small" id="window-text"></p>
+  </section>
+
+  <!-- Nhập mã vé -->
+  <section id="s-ticket" class="screen" hidden>
+    <button class="back" type="button" data-go="s-home">Quay lại</button>
+    <h2>Nhập mã vé</h2>
+    <p class="muted">Mã gồm 8 ký tự in trên vé BTC phát. Mỗi mã chơi được 1 lượt.</p>
+    <form id="f-ticket" novalidate>
+      <label class="field"><span>Mã vé</span>
+        <input id="i-ticket" class="code-input" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="9" placeholder="K7MX-2QPA">
+      </label>
+      <p class="error" id="e-ticket" role="alert"></p>
+      <button class="btn" type="submit">Kiểm tra mã</button>
+    </form>
+  </section>
+
+  <!-- Hồ sơ -->
+  <section id="s-profile" class="screen" hidden>
+    <h2>Hồ sơ người chơi</h2>
+    <form id="f-profile" novalidate>
+      <label class="field"><span>Họ và tên</span>
+        <input id="i-name" type="text" autocomplete="name" maxlength="80">
+      </label>
+      <label class="field"><span>Vai trò</span>
+        <select id="i-role">
+          <option value="sinh_vien">Sinh viên</option>
+          <option value="hoc_sinh">Học sinh</option>
+          <option value="can_bo">Cán bộ, giảng viên</option>
+          <option value="khac">Khác</option>
+        </select>
+      </label>
+      <label class="field" id="mssv-field"><span>MSSV</span>
+        <input id="i-mssv" type="text" inputmode="numeric" autocomplete="off" maxlength="12">
+        <span class="hint">Dùng để cập nhật quyền lợi trên hệ thống mã vạch.</span>
+      </label>
+      <label class="field"><span>Độ tuổi</span>
+        <select id="i-age">
+          <option value="18_22">18–22</option>
+          <option value="duoi_18">Dưới 18</option>
+          <option value="23_30">23–30</option>
+          <option value="tren_30">Trên 30</option>
+        </select>
+      </label>
+      <label class="check"><input id="i-consent" type="checkbox">
+        <span>Tôi đồng ý để BTC lưu họ tên, MSSV và kết quả chơi để ghi nhận quyền lợi. Chỉ BTC xem được; dữ liệu được xóa sau khi cập nhật xong.</span>
+      </label>
+      <label class="check"><input id="i-reduce" type="checkbox">
+        <span>Giảm hiệu ứng hình ảnh. Khi chọn sai, màn hình sẽ mờ, rung hoặc đổi màu trong vài giây. Chọn ô này nếu bạn nhạy cảm với ánh sáng hoặc chuyển động.</span>
+      </label>
+      <p class="error" id="e-profile" role="alert"></p>
+      <button class="btn" type="submit">Vào cửa hàng</button>
+    </form>
+  </section>
+
+  <!-- Tình huống -->
+  <section id="s-play" class="screen" hidden>
+    <div class="hud">
+      <div class="lives" id="hud-lives"></div>
+      <div id="hud-step"></div>
+      <div id="hud-score"></div>
+    </div>
+    <p class="chip" id="p-context"></p>
+    <h2 id="p-title"></h2>
+    <p class="quote" id="p-intro"></p>
+    <p class="muted small">Chạm vào một món để xem kỹ, rồi chọn món bạn mua.</p>
+    <div class="shelf" id="p-shelf"></div>
+  </section>
+
+  <!-- Chọn đúng -->
+  <section id="s-ok" class="screen" hidden>
+    <div class="verdict ok"><h2>An toàn</h2><p id="ok-gain"></p></div>
+    <div class="panel">
+      <p>Món ma túy trong tình huống này là <strong id="ok-drug"></strong>.</p>
+      <p id="ok-lesson"></p>
+    </div>
+    <button class="btn" type="button" id="ok-next"></button>
+  </section>
+
+  <!-- Chọn sai: hậu quả -->
+  <section id="s-bad" class="screen" hidden>
+    <div class="verdict bad"><h2>Bạn đã chọn trúng ma túy</h2><p id="bad-name"></p></div>
+    <article class="panel" id="bad-story"><h3>Chuyện gì xảy ra</h3><p class="story"></p></article>
+    <article class="panel" id="bad-harm" hidden><h3>Tác hại với cơ thể</h3><p class="harm"></p><p class="src"></p></article>
+    <article class="panel" id="bad-signs" hidden>
+      <h3>Cách nhận ra</h3><ul class="signs"></ul>
+      <h3>Pháp luật nói gì</h3><p class="legal"></p><p class="muted small legal-common"></p>
+      <div class="general" hidden><h3>Dấu hiệu chung của ma túy núp bóng</h3><ul class="general-list"></ul></div>
+    </article>
+    <p class="help small">Thấy bạn mình hoặc chính mình có biểu hiện lạ sau khi ăn, uống, hút: gọi 115, giữ lại bao bì sản phẩm để đưa cho bác sĩ.</p>
+    <button class="btn" type="button" id="bad-next"></button>
+  </section>
+
+  <!-- Hoàn thành -->
+  <section id="s-win" class="screen" hidden>
+    <div class="receipt">
+      <p class="r-head">Lucid Cart</p>
+      <h2>Bạn đã rời Lucid Cart an toàn</h2>
+      <dl class="r-lines">
+        <div><dt>Người chơi</dt><dd id="w-name"></dd></div>
+        <div><dt>Dạng ma túy đã nhận diện</dt><dd>5/5</dd></div>
+        <div><dt>Mạng còn lại</dt><dd id="w-lives"></dd></div>
+        <div><dt>Điểm</dt><dd id="w-score"></dd></div>
+      </dl>
+      <p class="muted small">Mã hoàn thành</p>
+      <div class="barcode" id="w-barcode" aria-hidden="true"></div>
+      <p class="r-code" id="w-code"></p>
+      <button class="btn secondary" type="button" id="w-copy">Sao chép mã</button>
+      <p class="muted small">Chụp màn hình hoặc lưu mã này. Mang mã đến Workshop để tham gia rút thăm may mắn.</p>
+    </div>
+    <div class="panel" id="w-near" hidden></div>
+    <h3>Quyền lợi của bạn</h3>
+    <ul id="w-benefits"></ul>
+    <div class="panel workshop"></div>
+    <button class="btn secondary" type="button" id="w-share">Thách bạn bè</button>
+  </section>
+
+  <!-- Thua -->
+  <section id="s-lose" class="screen" hidden>
+    <h2>Game Over. Ngoài đời thật, không ai có mạng thứ hai.</h2>
+    <p>Đây là tờ rơi về những cái bẫy bạn vừa mắc. Tải về để nhớ, hoặc gửi cho bạn bè.</p>
+    <img class="flyer" id="l-flyer" alt="Tờ rơi điện tử tóm tắt các dạng ma túy bạn đã chọn sai, cách nhận biết và quy định pháp luật">
+    <a class="btn" id="l-download" download="lucid-cart-to-roi.png" href="#">Tải tờ rơi</a>
+    <p>Chơi lại bằng mã vé mới, bạn vẫn có thể nhận đủ quyền lợi.</p>
+    <div class="panel workshop"></div>
+    <button class="btn secondary" type="button" id="l-again">Chơi lại với mã vé mới</button>
+  </section>
+</main>
+
+<div id="fx" hidden></div>
+
+<dialog id="d-item" aria-labelledby="d-title">
+  <div class="d-ico"></div>
+  <h2 id="d-title"></h2>
+  <span class="tag" id="d-price"></span>
+  <p id="d-detail"></p>
+  <p class="error" id="d-error" role="alert"></p>
+  <div class="d-actions">
+    <button class="btn" type="button" id="d-buy">Mua món này</button>
+    <button class="btn secondary" type="button" id="d-close">Xem món khác</button>
+  </div>
+</dialog>
+
+<script>
+(() => {
+'use strict';
+const CFG = window.LUCID_CONFIG || {};
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const configured = !!(CFG.SUPABASE_URL && CFG.SUPABASE_ANON_KEY &&
+  !/YOUR-PROJECT/.test(CFG.SUPABASE_URL) && !/YOUR-ANON-KEY/.test(CFG.SUPABASE_ANON_KEY));
+const db = configured && window.supabase
+  ? window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY, {auth: {persistSession: false}})
+  : null;
+
+/* ---------- Biểu tượng sản phẩm (nét đơn, theo màu chữ) ---------- */
+const P = d => `<svg class="ico" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const ICONS = {
+  device: P('<rect x="16" y="9" width="16" height="34" rx="6"/><rect x="19" y="3" width="10" height="7" rx="2"/><circle cx="24" cy="31" r="3"/>'),
+  tin: P('<rect x="8" y="15" width="32" height="20" rx="5"/><path d="M8 21h32"/>'),
+  can: P('<rect x="14" y="7" width="20" height="34" rx="4"/><path d="M14 13h20M14 35h20"/>'),
+  snack: P('<path d="M11 8l4 5v22l-4 5h26l-4-5V13l4-5z"/><path d="M20 20h8M20 26h8"/>'),
+  cup: P('<path d="M13 15h22l-3 27H16z"/><path d="M11 15h26"/><path d="M26 15l5-11"/>'),
+  cake: P('<rect x="10" y="24" width="28" height="16" rx="3"/><path d="M10 31h28M24 24v-8"/><path d="M24 12c-2 0-2-3 0-5 2 2 2 5 0 5z"/>'),
+  packet: P('<path d="M13 7h22v34H13z"/><path d="M13 13h22"/><circle cx="24" cy="26" r="5"/>'),
+  box: P('<rect x="8" y="14" width="32" height="26" rx="2"/><path d="M8 22h32M20 14v8"/>'),
+  bottle: P('<path d="M20 4h8v6l4 6v24a3 3 0 0 1-3 3H19a3 3 0 0 1-3-3V16l4-6z"/><path d="M16 24h16"/>'),
+  candy: P('<ellipse cx="24" cy="24" rx="9" ry="7"/><path d="M15 24l-8-6v12zM33 24l8-6v12z"/>'),
+  food: P('<path d="M8 22h32a16 16 0 0 1-32 0z"/><path d="M18 16c0-4 4-4 4-8M27 16c0-4 4-4 4-8"/>'),
+  bar: P('<rect x="11" y="7" width="26" height="34" rx="3"/><path d="M11 18h26M11 29h26M24 7v34"/>'),
+  gift: P('<rect x="9" y="19" width="30" height="21" rx="2"/><path d="M7 13h34v6H7zM24 13v27"/><path d="M24 13c-4-6-10-4-8 0M24 13c4-6 10-4 8 0"/>'),
+  stamps: P('<rect x="8" y="8" width="32" height="32" rx="3"/><path d="M8 18.7h32M8 29.3h32M18.7 8v32M29.3 8v32"/>'),
+  sticker: P('<path d="M10 8h28v20L26 40H10z"/><path d="M38 28H26v12"/>'),
+  card: P('<rect x="6" y="12" width="36" height="24" rx="2"/><path d="M25 18v12M30 18h6v6h-6z"/>'),
+  herb: P('<path d="M24 41C10 31 12 15 24 8c12 7 14 23 0 33z"/><path d="M24 15v26"/>'),
+  milk: P('<path d="M15 14l4-8h10l4 8v28H15z"/><path d="M15 14h18"/>'),
+  cigarette: P('<rect x="5" y="21" width="32" height="7" rx="1"/><path d="M29 21v7"/><path d="M42 18c0-3-2-4-2-7"/>'),
+  pills: P('<circle cx="17" cy="20" r="7"/><circle cx="31" cy="29" r="7"/><path d="M12 20h10"/>'),
+  tube: P('<rect x="16" y="6" width="16" height="36" rx="4"/><path d="M16 12h16"/>'),
+  fruit: P('<ellipse cx="24" cy="33" rx="18" ry="6"/><circle cx="18" cy="25" r="5"/><circle cx="29" cy="24" r="6"/>'),
+  powder: P('<rect x="12" y="8" width="24" height="32" rx="2"/><path d="M12 14h24"/><path d="M16 36c2-8 14-8 16 0z"/>')
+};
+const icon = k => ICONS[k] || ICONS.box;
+const SHIELD = on => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l8 3v6c0 5-3.4 9.3-8 11-4.6-1.7-8-6-8-11V5z" fill="${on ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"/></svg>`;
+
+const CONTEXTS = {via_he: 'Vỉa hè, cổng trường', tap_hoa: 'Tạp hóa, cửa hàng tiện lợi', quan_nuoc: 'Quán nước, giải khát'};
+
+/* ---------- Nội dung hậu quả, nhận diện, pháp lý (theo tài liệu kịch bản, mục 5–6) ---------- */
+const VARIANTS = {
+  '1': {name: 'Pod chill chứa Etomidate', group: 'Dạng 1: tinh dầu, đầu pod thuốc lá điện tử',
+    looks: 'Đầu pod thuốc lá điện tử hương trái cây, nhỏ như USB, được gọi là “pod chill”, “pod thư giãn”.',
+    fx: '1', fxText: 'Chân bạn mềm nhũn…',
+    story: 'Hơi đầu ngọt mùi dâu. Mười giây sau, chân bạn mềm nhũn, lời nói líu lại, bạn không nhớ đường về phòng. Bạn cùng phòng phải gọi cấp cứu lúc 1 giờ sáng.',
+    harm: 'Lơ mơ, nói khó, đi loạng choạng, mất định hướng. Nặng hơn: co giật cơ, lịm đi, ức chế hô hấp, tụt huyết áp. Dùng kèm rượu bia có thể ngừng thở. Dùng lặp lại gây rối loạn tuyến thượng thận.',
+    src: 'Nguồn: Báo Công an Nhân dân, 05/08/2026.',
+    signs: ['Thiết bị nhỏ như USB, hương trái cây ngọt.', 'Tên gọi “pod chill”, “pod thư giãn”, “pod bay”.', 'Giá 1,6–2,55 triệu đồng/đầu, kèm lời hứa “không lên test”.'],
+    legal: 'Etomidate là chất ma túy theo Nghị định 28/2026/NĐ-CP. Riêng việc dùng thuốc lá điện tử đã bị phạt 3–5 triệu đồng (Nghị định 371/2025/NĐ-CP). Chuyền pod cho bạn cùng hút có thể bị xử lý về tội tổ chức sử dụng trái phép chất ma túy.'},
+  '2': {name: 'Thuốc lá, thảo mộc tẩm cần sa tổng hợp', group: 'Dạng 2: thuốc lá, thuốc lào, tinh dầu tẩm cần sa tổng hợp',
+    looks: 'Gói “thảo mộc”, điếu cuốn sẵn, tinh dầu ghi CBD; tên lóng “cỏ Mỹ”, “tobacco”.',
+    fx: '2', fxText: 'Tim đập loạn xạ…',
+    story: 'Hơi thứ hai, tim bạn đập loạn xạ. Bạn thấy bức tường như đổ ập xuống, hoảng loạn chạy ra đường mà không biết mình đang ở đâu.',
+    harm: 'Ảo giác, hoảng loạn, rối loạn nhịp tim, ngộ độc cấp tính.',
+    src: 'Nguồn: Phòng PC04 Công an tỉnh Quảng Ngãi, 04/11/2026.',
+    signs: ['Gói “thảo mộc” ghi “không dùng cho người”, có chữ CBD.', 'Điếu cuốn sẵn không nhãn, mùi lạ, bán lẻ giá cao.', 'Lời hứa “một hơi là bay”, “không nghiện”.'],
+    legal: 'Nhãn “CBD” hay “thảo mộc” không chứng minh sản phẩm hợp pháp. Dạng tinh dầu dùng qua thuốc lá điện tử còn vi phạm lệnh cấm thuốc lá điện tử.'},
+  '3a': {name: '“Nước vui”, đồ uống pha ma túy', group: 'Dạng 3: gói bột pha nước, cà phê, trà sữa',
+    looks: 'Gói bột nhỏ khoảng 15g bao bì bắt mắt, hoặc món đồ uống “ẩn” chỉ bán qua tin nhắn riêng.',
+    fx: '3a', fxText: 'Nóng ran… rồi tối sầm.',
+    story: 'Cả nhóm pha chung một bình. Nửa tiếng sau, tim bạn đập dồn dập, người nóng ran, rồi bạn đột ngột thiếp đi. Một bạn trong nhóm không tỉnh lại và phải đi cấp cứu.',
+    harm: 'Ảo giác mạnh, loạn thần. Chất kích thích trộn chất an thần dễ gây sốc, đột quỵ, suy hô hấp. Mỗi lô pha một kiểu nên rất dễ quá liều.',
+    src: 'Nguồn: Báo Đại biểu Nhân dân; Báo Thanh Niên; Công an tỉnh Quảng Ngãi.',
+    signs: ['Gói nhỏ bao bì bắt mắt, không nhãn tiếng Việt.', 'Món không có trên menu, chỉ đặt qua tin nhắn riêng.', 'Giá cao vô lý, lời mời “vui cả đêm”, “quẩy tới sáng”.'],
+    legal: 'Pha cho cả nhóm cùng uống có thể bị xử lý về tội tổ chức sử dụng trái phép chất ma túy (Điều 255 Bộ luật Hình sự). Kẻ cầm đầu đường dây “nước vui” ở TP.HCM bị tuyên tử hình tháng 5/2026.'},
+  '3b': {name: '“Nước biển” (GHB) nhỏ vào đồ uống', group: 'Dạng 3: biến thể lỏng “nước biển”',
+    looks: 'Ly nước đã mở, do người khác “gọi giúp” hoặc đã rời khỏi tầm mắt bạn.',
+    fx: '3b', fxText: '8:00 sáng hôm sau.',
+    story: 'Bạn tỉnh dậy lúc 8 giờ sáng ở một nơi lạ. Điện thoại và ví đã mất. Bạn không nhớ gì sau ngụm trà vải.',
+    harm: 'Mê man, mất trí nhớ chỉ sau vài giọt. Nạn nhân dễ bị lợi dụng, cướp tài sản.',
+    src: 'Nguồn: Báo Thanh Niên, 07/05/2026.',
+    signs: ['Không màu, không mùi, không nhìn thấy được.', 'Ly đã mở, người khác “gọi giúp”, ly rời khỏi tầm mắt.', 'Chóng mặt, buồn ngủ bất thường ngay sau khi uống.'],
+    legal: 'Lén bỏ ma túy vào đồ uống của người khác là hành vi phạm tội. Nếu nghi bị bỏ thuốc: nhờ người tin cậy đưa đến cơ sở y tế ngay, giữ lại ly nếu có thể, báo Công an (113).'},
+  '4a': {name: 'Kẹo, socola chứa cần sa (THC)', group: 'Dạng 4: kẹo, bánh, socola',
+    looks: 'Kẹo dẻo, kẹo dây, socola “xách tay” nhãn tiếng Anh có chữ THC, Medicated, Infused.',
+    fx: '4a', fxText: '60 phút sau…',
+    story: 'Ăn một viên không thấy gì, bạn ăn thêm hai viên. Một tiếng sau, tim đập loạn, bạn buồn nôn, hoảng loạn và tin rằng mình sắp chết. Bạn phải vào viện trong đêm.',
+    harm: 'Rối loạn cảm nhận thời gian và tâm trạng, suy giảm trí nhớ, ảo giác khi liều cao, rối loạn tâm thần. Tác dụng đến chậm nên dễ ăn thêm và ngộ độc nặng.',
+    src: 'Nguồn: Báo Tiền Phong; Công an tỉnh Quảng Ngãi.',
+    signs: ['Chữ THC, Cannabis, Medicated, Infused, “21+”, hình lá 7 cánh.', 'Chia ô theo liều, ghi “tác dụng sau 60 phút”.', 'Hàng “xách tay” không tem phụ tiếng Việt.'],
+    legal: 'Cần sa và chế phẩm từ cần sa thuộc nhóm ma túy tuyệt đối cấm tại Việt Nam, dù sản xuất hợp pháp ở nước ngoài. Mang về hoặc cất giữ có thể bị xử lý về tàng trữ, vận chuyển.'},
+  '4b': {name: 'Tem giấy tẩm LSD', group: 'Dạng 4: tem giấy',
+    looks: 'Ô giấy thấm nhỏ in hình hoạt hình, bán lẻ từng ô.',
+    fx: '4b', fxText: 'Còn 11 giờ 59 phút',
+    story: 'Mười phút sau, tường bắt đầu chảy, giọng bạn bè biến thành tiếng ồn đáng sợ. Cảm giác đó kéo dài suốt đêm và bạn không thể tự dừng lại.',
+    harm: 'Ảo giác, hoang tưởng, tác động kéo dài đến 12 giờ.',
+    src: 'Nguồn: Báo Pháp luật Việt Nam, dẫn lời bác sĩ Bệnh viện Tâm thần TP.HCM.',
+    signs: ['Ô giấy thấm khoảng 1,5×1,5cm, in hình hoạt hình.', 'Không có keo dán như sticker thật.', 'Bán lẻ từng ô giá cao, dặn “đặt lên lưỡi”.'],
+    legal: 'LSD là chất ma túy. Mua về cất giữ dù chưa dùng vẫn có thể bị xử lý về tàng trữ trái phép chất ma túy.'},
+  '5': {name: 'Thuốc lắc, bột hồng “ngựa hồng”', group: 'Dạng 5: viên nén nhiều màu, bột hồng',
+    looks: 'Viên nén màu in logo hoặc bột màu hồng không nhãn, đựng trong túi zip.',
+    fx: '5', fxText: '37,0°C',
+    story: 'Bạn nhảy suốt hai tiếng, người nóng ran, đầu đau như búa bổ. Rồi bạn ngã gục giữa sàn, bạn bè phải gọi 115.',
+    harm: 'Tăng thân nhiệt, mất nước, đột quỵ, có thể tử vong.',
+    src: 'Nguồn: Phòng PC04 Công an tỉnh Quảng Ngãi, 04/11/2026.',
+    signs: ['Viên nén nhiều màu in logo, hoặc bột hồng không nhãn.', 'Bán lẻ trong túi zip, giá cao.', 'Tên lóng “kẹo năng lượng”, “bột dâu”; lời mời “nhảy tới sáng”.'],
+    legal: 'MDMA (thuốc lắc) là chất ma túy. Mang theo dù chưa dùng có thể bị xử lý về tàng trữ. Rủ cả bàn cùng dùng có thể bị xử lý về tội tổ chức sử dụng trái phép chất ma túy.'}
+};
+const COMMON_LEGAL = 'Với mọi loại: sử dụng trái phép chất ma túy bị phạt cảnh cáo hoặc 1–2 triệu đồng (Điều 30 Nghị định 282/2025/NĐ-CP) và bị quản lý tại Công an cấp xã (Luật Phòng, chống ma túy 2025). Người đang hoặc vừa cai nghiện mà dùng lại có thể bị phạt tù 2–5 năm (Điều 256a Bộ luật Hình sự).';
+const GENERAL_SIGNS = [
+  'Thiếu nhãn tiếng Việt, nguồn gốc, nhà sản xuất hoặc hạn sử dụng.',
+  'Bán qua tài khoản cá nhân, nhóm kín, tin nhắn riêng; người bán né tránh khi được hỏi.',
+  'Quảng cáo bằng tác dụng: “vui hơn”, “bay hơn”, “chill hơn”, “thử một lần cho biết”.'
+];
+
+const ERRORS = {
+  LC_NOT_CONFIGURED: 'Trò chơi chưa được kết nối máy chủ. Báo BTC kiểm tra tệp config.js.',
+  LC_NETWORK: 'Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.',
+  LC_TICKET_INVALID: 'Mã vé không đúng. Kiểm tra lại 8 ký tự trên vé.',
+  LC_TICKET_USED: 'Mã vé này đã được dùng. Mỗi mã vé chơi được 1 lượt.',
+  LC_CLOSED: CFG.PLAY_WINDOW_TEXT || 'Trò chơi chưa mở hoặc đã kết thúc.',
+  LC_CONSENT: 'Bạn cần đồng ý để BTC lưu kết quả và ghi nhận quyền lợi.',
+  LC_NAME: 'Nhập họ và tên (2–80 ký tự).',
+  LC_MSSV: 'MSSV chỉ gồm chữ số, từ 6 đến 12 số.',
+  LC_MSSV_REQUIRED: 'Sinh viên cần nhập MSSV để được ghi nhận quyền lợi.',
+  LC_AGE: 'Chọn độ tuổi.',
+  LC_ROLE: 'Chọn vai trò.',
+  LC_NO_RESUME: 'Lượt chơi này không thể tiếp tục. Nhập lại mã vé để kiểm tra.',
+  LC_PLAY_INVALID: 'Lượt chơi không hợp lệ. Tải lại trang rồi nhập mã vé để tiếp tục.',
+  LC_PLAY_ENDED: 'Lượt chơi này đã kết thúc.',
+  LC_ITEM_INVALID: 'Món này không thuộc tình huống hiện tại. Tải lại trang rồi nhập mã vé để tiếp tục.'
+};
+const TICKET_STATUS = {
+  invalid: ERRORS.LC_TICKET_INVALID, used: ERRORS.LC_TICKET_USED, closed: ERRORS.LC_CLOSED,
+  expired: 'Lượt chơi của mã này bị bỏ dở quá 30 phút nên đã đóng. Mỗi mã vé chơi được 1 lượt.'
+};
+
+/* ---------- Trạng thái ---------- */
+const S = {
+  code: '', play: null, token: null, lives: 2, maxLives: 2, score: 0, step: 0, name: '',
+  current: null, opened: new Set(), selected: null, last: null, badStep: 0, sawGeneral: false,
+  reduceFx: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+};
+
+/* ---------- Tiện ích ---------- */
+function show(id) {
+  $$('.screen').forEach(s => { s.hidden = s.id !== id; });
+  window.scrollTo(0, 0);
+  const h = $(`#${id} h1, #${id} h2`);
+  if (h) { h.setAttribute('tabindex', '-1'); h.focus({preventScroll: true}); }
+}
+async function rpc(fn, args) {
+  if (!db) throw new Error('LC_NOT_CONFIGURED');
+  let res;
+  try { res = await db.rpc(fn, args); } catch (e) { throw new Error('LC_NETWORK'); }
+  if (res.error) throw new Error(res.error.message || 'LC_NETWORK');
+  return res.data;
+}
+function errText(e) {
+  const m = String((e && e.message) || e || '');
+  const code = (m.match(/LC_[A-Z_]+/) || [])[0];
+  return ERRORS[code] || ERRORS.LC_NETWORK;
+}
+const normCode = v => String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+const fmtCode = v => (v.length > 4 ? v.slice(0, 4) + '-' + v.slice(4) : v);
+const busy = (btn, on) => { if (btn) btn.disabled = on; };
+
+function applyState(st) {
+  S.play = st.play_id; S.token = st.token; S.lives = st.lives; S.maxLives = st.max_lives || S.maxLives;
+  S.score = st.score; S.step = st.step; if (st.full_name) S.name = st.full_name;
+  renderHud();
+}
+function renderHud() {
+  const l = $('#hud-lives');
+  l.innerHTML = Array.from({length: S.maxLives}, (_, i) => SHIELD(i < S.lives)).join('');
+  l.setAttribute('aria-label', `Còn ${S.lives}/${S.maxLives} mạng`);
+  l.setAttribute('role', 'img');
+  $('#hud-step').textContent = `Tình huống ${Math.min(S.step + 1, 5)}/5`;
+  $('#hud-score').textContent = `${S.score} điểm`;
+}
+
+/* ---------- Màn hình tình huống ---------- */
+function renderSituation(sit) {
+  S.current = sit; S.opened = new Set(); S.selected = null;
+  $('#p-context').textContent = CONTEXTS[sit.context] || '';
+  $('#p-title').textContent = sit.title;
+  $('#p-intro').textContent = sit.intro;
+  const shelf = $('#p-shelf');
+  shelf.classList.remove('busy');
+  shelf.innerHTML = '';
+  sit.items.forEach(it => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'item'; b.dataset.id = it.id;
+    b.innerHTML = `${icon(it.icon)}<span class="tag">${esc(it.price || '')}</span><span class="label">${esc(it.label)}</span><span class="seen">Chạm để xem kỹ</span>`;
+    b.addEventListener('click', () => openItem(it, b));
+    shelf.appendChild(b);
+  });
+  renderHud();
+}
+function openItem(it, btn) {
+  S.selected = it;
+  S.opened.add(it.id);
+  btn.classList.add('is-seen');
+  $('.seen', btn).textContent = 'Đã xem';
+  $('.d-ico').innerHTML = icon(it.icon);
+  $('#d-title').textContent = it.label;
+  $('#d-price').textContent = it.price || '';
+  $('#d-detail').textContent = it.detail;
+  $('#d-error').textContent = '';
+  busy($('#d-buy'), false);
+  $('#d-item').showModal();
+}
+$('#d-close').addEventListener('click', () => $('#d-item').close());
+$('#d-buy').addEventListener('click', async () => {
+  if (!S.selected) return;
+  const btn = $('#d-buy'); busy(btn, true);
+  $('#p-shelf').classList.add('busy');
+  try {
+    const r = await rpc('lc_answer', {p_play: S.play, p_token: S.token, p_item: S.selected.id, p_inspected: S.opened.size});
+    $('#d-item').close();
+    S.last = r; applyState(r);
+    if (r.correct) showOk(r);
+    else { await runFx(r.variant); showBad(r); }
+  } catch (e) {
+    $('#d-error').textContent = errText(e);
+    $('#p-shelf').classList.remove('busy');
+    busy(btn, false);
+  }
+});
+
+/* ---------- Chọn đúng ---------- */
+function showOk(r) {
+  $('#ok-gain').textContent = r.gain > 100 ? `+${r.gain} điểm (thưởng vì đã xem kỹ nhiều món)` : `+${r.gain} điểm`;
+  $('#ok-drug').textContent = r.drug_label;
+  $('#ok-lesson').textContent = r.lesson;
+  const next = $('#ok-next');
+  next.textContent = r.status === 'won' ? 'Xem kết quả' : 'Tình huống tiếp theo';
+  next.onclick = () => { if (r.status === 'won') showWin(r); else { renderSituation(r.next); show('s-play'); } };
+  show('s-ok');
+}
+
+/* ---------- Hiệu ứng khi chọn sai ---------- */
+function runFx(variant) {
+  return new Promise(resolve => {
+    const v = VARIANTS[variant] || VARIANTS['1'];
+    const fx = $('#fx'), app = $('#app');
+    let done = false, timer = null, iv = null;
+    const finish = () => {
+      if (done) return; done = true;
+      clearTimeout(timer); clearInterval(iv);
+      fx.hidden = true; fx.className = ''; fx.innerHTML = ''; app.className = '';
+      resolve();
+    };
+    fx.innerHTML = '<p class="fx-text" aria-live="assertive"></p><button class="fx-skip" type="button">Bỏ qua</button>';
+    const txt = $('.fx-text', fx);
+    $('.fx-skip', fx).addEventListener('click', finish);
+    fx.hidden = false;
+    let dur = 4200;
+    if (S.reduceFx) {
+      fx.className = 'fx-static'; txt.textContent = v.fxText; dur = 1800;
+    } else {
+      fx.className = 'fx-' + v.fx; app.className = 'app-' + v.fx; txt.textContent = v.fxText;
+      if (v.fx === '5') {
+        let t = 37.0;
+        iv = setInterval(() => { t = Math.min(40.6, t + 0.2); txt.textContent = t.toFixed(1).replace('.', ',') + '°C'; }, 180);
+      }
+      if (v.fx === '4b') {
+        let m = 59;
+        iv = setInterval(() => { m = Math.max(0, m - 7); txt.textContent = 'Còn 11 giờ ' + String(m).padStart(2, '0') + ' phút'; }, 500);
+      }
+    }
+    $('.fx-skip', fx).focus();
+    timer = setTimeout(finish, dur);
+  });
+}
+
+/* ---------- Chọn sai: hậu quả theo từng bước ---------- */
+function showBad(r) {
+  const v = VARIANTS[r.variant] || VARIANTS['1'];
+  $('#bad-name').textContent = `${r.drug_label}: ${v.name}`;
+  $('.story', $('#bad-story')).textContent = v.story;
+  $('.harm', $('#bad-harm')).textContent = v.harm;
+  $('.src', $('#bad-harm')).textContent = v.src;
+  $('.signs', $('#bad-signs')).innerHTML = v.signs.map(s => `<li>${esc(s)}</li>`).join('');
+  $('.legal', $('#bad-signs')).textContent = v.legal;
+  $('.legal-common', $('#bad-signs')).textContent = COMMON_LEGAL;
+  const gen = $('.general', $('#bad-signs'));
+  gen.hidden = S.sawGeneral;
+  $('.general-list', gen).innerHTML = GENERAL_SIGNS.map(s => `<li>${esc(s)}</li>`).join('');
+  S.sawGeneral = true;
+  $('#bad-harm').hidden = true; $('#bad-signs').hidden = true;
+  S.badStep = 0;
+  setBadButton(r);
+  show('s-bad');
+}
+function setBadButton(r) {
+  const btn = $('#bad-next');
+  if (S.badStep === 0) btn.textContent = 'Điều gì xảy ra với cơ thể?';
+  else if (S.badStep === 1) btn.textContent = 'Cách nhận ra và luật nói gì';
+  else btn.textContent = r.status === 'lost' ? 'Xem kết quả' : 'Tiếp tục: tình huống khác, cùng dạng';
+  btn.onclick = () => {
+    if (S.badStep === 0) { $('#bad-harm').hidden = false; S.badStep = 1; focusPanel('#bad-harm'); }
+    else if (S.badStep === 1) { $('#bad-signs').hidden = false; S.badStep = 2; focusPanel('#bad-signs'); }
+    else if (r.status === 'lost') { showLose(r); return; }
+    else { renderSituation(r.next); show('s-play'); return; }
+    setBadButton(r);
+  };
+}
+function focusPanel(sel) {
+  const h = $(`${sel} h3`); h.setAttribute('tabindex', '-1'); h.focus();
+  h.scrollIntoView({behavior: S.reduceFx ? 'auto' : 'smooth', block: 'start'});
+}
+
+/* ---------- Workshop ---------- */
+function renderWorkshop() {
+  const w = CFG.WORKSHOP || {};
+  const html = `<h3>Workshop “${esc(w.name)}”</h3>
+    <p class="muted small">${esc(w.full_name)}</p>
+    <p><strong>${esc(w.time)}</strong><br>${esc(w.place)}</p>
+    <ul class="agenda">${(w.agenda || []).map(a => `<li><span>${esc(a[0])}</span>${esc(a[1])}</li>`).join('')}</ul>
+    ${w.register_url
+      ? `<a class="btn" href="${esc(w.register_url)}" target="_blank" rel="noopener">Đăng ký tham dự Workshop</a>`
+      : '<p class="muted small">BTC sẽ thông báo đường dẫn đăng ký.</p>'}`;
+  $$('.workshop').forEach(el => { el.innerHTML = html; });
+}
+
+/* ---------- Hoàn thành ---------- */
+function barcodeSVG(code) {
+  let x = 0; const bars = [];
+  const add = (w, fill) => { if (fill) bars.push(`<rect x="${x}" y="0" width="${w}" height="60"/>`); x += w; };
+  add(2, 1); add(1, 0); add(2, 1); add(2, 0);
+  for (const ch of code.replace(/-/g, '')) {
+    const n = ch.charCodeAt(0);
+    for (let i = 0; i < 4; i++) { add(1 + ((n >> (i * 2)) & 1) + ((n >> (i * 2 + 1)) & 1), 1); add(1 + ((n >> i) & 1), 0); }
+  }
+  add(2, 1); add(1, 0); add(2, 1);
+  return `<svg viewBox="0 0 ${x} 60" preserveAspectRatio="none" focusable="false"><g fill="currentColor">${bars.join('')}</g></svg>`;
+}
+function showWin(r) {
+  $('#w-name').textContent = S.name;
+  $('#w-lives').textContent = `${r.lives}/${r.max_lives}`;
+  $('#w-score').textContent = r.score;
+  $('#w-code').textContent = r.completion_code;
+  $('#w-barcode').innerHTML = barcodeSVG(r.completion_code);
+  $('#w-benefits').innerHTML = (CFG.BENEFITS || []).map(b => `<li>${esc(b)}</li>`).join('');
+  const near = $('#w-near');
+  const miss = (r.wrong || []).map(w => VARIANTS[w.variant]).filter(Boolean)[0];
+  if (miss) {
+    near.innerHTML = `<h3>Bạn đã suýt mắc bẫy: ${esc(miss.name)}</h3><ul>${miss.signs.map(s => `<li>${esc(s)}</li>`).join('')}</ul>`;
+    near.hidden = false;
+  } else near.hidden = true;
+  try { sessionStorage.removeItem('lc_code'); } catch (e) {}
+  show('s-win');
+}
+$('#w-copy').addEventListener('click', async () => {
+  const code = $('#w-code').textContent;
+  try { await navigator.clipboard.writeText(code); $('#w-copy').textContent = 'Đã sao chép mã'; }
+  catch (e) { $('#w-copy').textContent = 'Hãy chụp màn hình để lưu mã'; }
+});
+$('#w-share').addEventListener('click', async () => {
+  const url = location.origin + location.pathname;
+  const text = 'Mình vừa nhận diện đủ 5 dạng ma túy núp bóng trong Lucid Cart. Bạn thử xem?';
+  if (navigator.share) { try { await navigator.share({title: 'Lucid Cart', text, url}); } catch (e) {} return; }
+  try { await navigator.clipboard.writeText(`${text} ${url}`); $('#w-share').textContent = 'Đã sao chép lời mời'; } catch (e) {}
+});
+
+/* ---------- Thua: tờ rơi điện tử ---------- */
+function wrapLines(ctx, text, maxW) {
+  const words = String(text).split(/\s+/); const lines = []; let line = '';
+  for (const w of words) {
+    const t = line ? line + ' ' + w : w;
+    if (ctx.measureText(t).width > maxW && line) { lines.push(line); line = w; } else line = t;
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+async function makeFlyer(wrongs, name) {
+  try { await document.fonts.ready; } catch (e) {}
+  const W = 1080, PAD = 72, IW = W - PAD * 2;
+  const C = {paper: '#F2F4F6', ink: '#16202A', muted: '#4F5A67', tag: '#FFD23F', white: '#FFFFFF', soft: '#C9D2DB'};
+  const FF = "'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif";
+  const font = (w, s) => `${w} ${s}px ${FF}`;
+  const cv = document.createElement('canvas'); const ctx = cv.getContext('2d');
+  const ops = []; let y = 0;
+  const T = (str, s, w, color, x = PAD, maxW = IW) => {
+    const lh = Math.round(s * 1.38); ctx.font = font(w, s);
+    wrapLines(ctx, str, maxW).forEach((ln, i) => ops.push({k: 't', s: ln, f: font(w, s), c: color, x, y: y + s + i * lh}));
+    y += wrapLines(ctx, str, maxW).length * lh;
+  };
+  const gap = h => { y += h; };
+  const uniq = [...new Map((wrongs || []).map(w => [w.variant, w])).values()].filter(w => VARIANTS[w.variant]);
+
+  // Đầu trang
+  gap(PAD);
+  T('Lucid Cart', 30, 700, C.tag); gap(14);
+  T(uniq.length > 1 ? `${uniq.length} cái bẫy bạn vừa mắc` : 'Cái bẫy bạn vừa mắc', 64, 800, C.white); gap(6);
+  T('và cách nhận ra chúng', 38, 600, C.white); gap(14);
+  if (name) T('Người chơi: ' + name, 26, 400, C.soft);
+  gap(PAD * 0.7);
+  const headH = y;
+
+  // Từng dạng đã chọn sai
+  gap(44);
+  uniq.forEach((w, idx) => {
+    const v = VARIANTS[w.variant];
+    ctx.font = font(800, 34);
+    const tw = Math.min(IW, ctx.measureText(v.name).width + 70);
+    ops.push({k: 'r', x: PAD, y, w: tw, h: 64, c: C.tag});
+    ops.push({k: 'c', x: PAD + 20, y: y + 32, r: 7, c: C.paper});
+    ops.push({k: 't', s: v.name, f: font(800, 34), c: C.ink, x: PAD + 44, y: y + 44});
+    gap(64 + 18);
+    T(v.group, 26, 600, C.muted); gap(10);
+    T('Trông như: ' + v.looks, 30, 400, C.ink); gap(14);
+    v.signs.forEach(sg => { T('•  ' + sg, 30, 600, C.ink); gap(6); });
+    gap(10);
+    T('Tác hại: ' + v.harm, 28, 400, C.ink); gap(10);
+    T('Pháp lý: ' + v.legal, 28, 400, C.ink); gap(36);
+    if (idx < uniq.length - 1) { ops.push({k: 'r', x: PAD, y, w: IW, h: 2, c: C.soft}); gap(38); }
+  });
+
+  // Dấu hiệu chung
+  ops.push({k: 'r', x: PAD, y, w: IW, h: 2, c: C.soft}); gap(38);
+  T('Dấu hiệu chung của ma túy núp bóng', 34, 800, C.ink); gap(10);
+  GENERAL_SIGNS.forEach(g => { T('•  ' + g, 28, 400, C.ink); gap(6); });
+  gap(44);
+
+  // Chân trang
+  const footStart = y, footIdx = ops.length;
+  gap(54);
+  T('Nhớ “3 Không”: Không thử – Không nhận – Không tiếp tay', 36, 800, C.tag); gap(14);
+  T('Gặp sản phẩm nghi vấn: báo 113. Có người bất thường sau khi ăn uống: gọi 115.', 28, 400, C.white); gap(14);
+  const ws = CFG.WORKSHOP || {};
+  T(`Workshop “${ws.name}”: ${ws.time}, ${ws.place}`, 26, 400, C.soft); gap(54);
+  let H = y;
+  const slack = Math.max(0, 1350 - H);
+  if (slack) { ops.slice(footIdx).forEach(o => { o.y += slack; }); H += slack; }
+  ops.splice(footIdx, 0, {k: 'r', x: 0, y: footStart + slack, w: W, h: H - footStart - slack, c: C.ink});
+  ops.unshift({k: 'r', x: 0, y: 0, w: W, h: headH, c: C.ink});
+
+  cv.width = W; cv.height = H;
+  ctx.fillStyle = C.paper; ctx.fillRect(0, 0, W, H);
+  ctx.textBaseline = 'alphabetic';
+  for (const o of ops) {
+    if (o.k === 'r') { ctx.fillStyle = o.c; ctx.fillRect(o.x, o.y, o.w, o.h); }
+    else if (o.k === 'c') { ctx.fillStyle = o.c; ctx.beginPath(); ctx.arc(o.x, o.y, o.r, 0, Math.PI * 2); ctx.fill(); }
+    else { ctx.font = o.f; ctx.fillStyle = o.c; ctx.fillText(o.s, o.x, o.y); }
+  }
+  return cv;
+}
+async function showLose(r) {
+  show('s-lose');
+  try { sessionStorage.removeItem('lc_code'); } catch (e) {}
+  const cv = await makeFlyer(r.wrong || [], S.name);
+  const url = cv.toDataURL('image/png');
+  $('#l-flyer').src = url;
+  $('#l-download').href = url;
+}
+$('#l-again').addEventListener('click', () => {
+  Object.assign(S, {code: '', play: null, token: null, score: 0, step: 0, last: null, sawGeneral: false});
+  $('#i-ticket').value = ''; $('#e-ticket').textContent = '';
+  show('s-ticket');
+});
+
+/* ---------- Nhập mã vé ---------- */
+$('#i-ticket').addEventListener('input', e => { e.target.value = fmtCode(normCode(e.target.value)); });
+$('#f-ticket').addEventListener('submit', async e => {
+  e.preventDefault();
+  const err = $('#e-ticket'), btn = $('button[type=submit]', e.target);
+  const code = normCode($('#i-ticket').value);
+  err.textContent = '';
+  if (code.length !== 8) { err.textContent = 'Mã vé gồm đúng 8 ký tự.'; return; }
+  busy(btn, true);
+  try {
+    const r = await rpc('lc_check_ticket', {p_code: code});
+    if (r.status === 'new') {
+      S.code = code; try { sessionStorage.setItem('lc_code', code); } catch (x) {}
+      show('s-profile');
+    } else if (r.status === 'resume') {
+      const st = await rpc('lc_resume', {p_code: code});
+      S.code = code; applyState(st); renderSituation(st.situation); show('s-play');
+    } else err.textContent = TICKET_STATUS[r.status] || ERRORS.LC_TICKET_INVALID;
+  } catch (x) { err.textContent = errText(x); }
+  finally { busy(btn, false); }
+});
+
+/* ---------- Hồ sơ ---------- */
+const syncRole = () => {
+  const sv = $('#i-role').value === 'sinh_vien';
+  $('#mssv-field > span').textContent = sv ? 'MSSV' : 'MSSV (nếu có)';
+};
+$('#i-role').addEventListener('change', syncRole);
+$('#i-mssv').addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 12); });
+$('#f-profile').addEventListener('submit', async e => {
+  e.preventDefault();
+  const err = $('#e-profile'), btn = $('button[type=submit]', e.target);
+  const name = $('#i-name').value.trim(), role = $('#i-role').value, mssv = $('#i-mssv').value.trim();
+  err.textContent = '';
+  if (name.length < 2) { err.textContent = ERRORS.LC_NAME; $('#i-name').focus(); return; }
+  if (role === 'sinh_vien' && !mssv) { err.textContent = ERRORS.LC_MSSV_REQUIRED; $('#i-mssv').focus(); return; }
+  if (mssv && !/^\d{6,12}$/.test(mssv)) { err.textContent = ERRORS.LC_MSSV; $('#i-mssv').focus(); return; }
+  if (!$('#i-consent').checked) { err.textContent = ERRORS.LC_CONSENT; $('#i-consent').focus(); return; }
+  S.reduceFx = S.reduceFx || $('#i-reduce').checked;
+  busy(btn, true);
+  try {
+    const st = await rpc('lc_start', {p_code: S.code, p_full_name: name, p_mssv: mssv || null,
+      p_age_group: $('#i-age').value, p_role: role, p_consent: true});
+    S.name = name; applyState(st); renderSituation(st.situation); show('s-play');
+  } catch (x) { err.textContent = errText(x); }
+  finally { busy(btn, false); }
+});
+
+/* ---------- Khởi động ---------- */
+$$('[data-go]').forEach(b => b.addEventListener('click', () => show(b.dataset.go)));
+$('#window-text').textContent = CFG.PLAY_WINDOW_TEXT || '';
+if (!configured) $('#cfg-warning').hidden = false;
+try { const saved = sessionStorage.getItem('lc_code'); if (saved) $('#i-ticket').value = fmtCode(saved); } catch (e) {}
+syncRole();
+renderWorkshop();
+})();
+</script>
+</body>
+</html>

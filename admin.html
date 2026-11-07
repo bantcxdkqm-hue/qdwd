@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Lucid Cart – Quản trị BTC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<style>
+:root{--paper:#EEF1F4;--card:#FFFFFF;--ink:#16202A;--muted:#566170;--line:#D3DAE1;--tag:#FFD23F;--tag-ink:#1B1B12;
+  --danger:#C42537;--safe:#17804F;--focus:#1F5FBF;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--paper:#0E141A;--card:#17202A;--ink:#E7EDF2;--muted:#9AA6B3;--line:#2A3642;
+  --danger:#FF6170;--safe:#3BC487;--focus:#7FB0FF;color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--paper);color:var(--ink)}
+body{font-family:'Be Vietnam Pro',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;font-size:15px;line-height:1.5;
+  padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
+.wrap{max-width:1000px;margin:0 auto;padding:20px 18px 48px}
+h1{font-size:1.7rem;font-weight:800;letter-spacing:-.02em;margin:.2em 0}
+h2{font-size:1.2rem;font-weight:800;margin:1.2em 0 .5em}
+.muted{color:var(--muted)} .small{font-size:.85rem}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin:14px 0}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:.5em 1.1em;border-radius:999px;border:2px solid var(--ink);
+  background:var(--ink);color:var(--paper);font:inherit;font-weight:700;cursor:pointer;text-decoration:none}
+.btn.secondary{background:transparent;color:var(--ink)}
+.btn:disabled{opacity:.5;cursor:progress}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+label.f{display:flex;flex-direction:column;gap:4px;font-weight:600}
+input[type=text],input[type=email],input[type=password],input[type=number]{min-height:42px;padding:.45em .7em;border-radius:10px;border:1.5px solid var(--line);
+  background:var(--card);color:var(--ink);font:inherit;min-width:180px}
+.check{display:flex;gap:8px;align-items:center;font-weight:600}
+.check input{width:20px;height:20px;accent-color:var(--ink)}
+.error{color:var(--danger);font-weight:600;min-height:1.3em}
+.ok{color:var(--safe);font-weight:600}
+header.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;border-bottom:1px dashed var(--line);padding-bottom:12px}
+.tag{display:inline-block;background:var(--tag);color:var(--tag-ink);font-weight:800;padding:.2em .7em .2em 1.2em;
+  clip-path:polygon(11px 0,100% 0,100% 100%,11px 100%,0 50%)}
+nav.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 4px}
+nav.tabs button{font:inherit;font-weight:700;border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:.45em 1em;cursor:pointer}
+nav.tabs button[aria-selected=true]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.tabpanel[hidden],[hidden]{display:none!important}
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-weight:700;background:var(--paper)}
+.codes{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-top:10px}
+.codes span{font-weight:800;letter-spacing:.08em;border:1px dashed var(--line);border-radius:8px;padding:8px;text-align:center;background:var(--card)}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.stat b{display:block;font-size:1.6rem;font-weight:800;font-variant-numeric:tabular-nums}
+.bar{display:grid;grid-template-columns:minmax(150px,240px) 1fr 70px;gap:10px;align-items:center;padding:6px 0}
+.bar .track{height:14px;background:var(--paper);border-radius:7px;overflow:hidden;border:1px solid var(--line)}
+.bar .fill{height:100%;background:var(--danger)}
+.bar .num{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div><span class="tag">Lucid Cart</span><h1>Quản trị BTC</h1></div>
+    <div id="who" class="small muted" hidden><span id="who-email"></span> <button class="btn secondary" id="logout" type="button">Đăng xuất</button></div>
+  </header>
+
+  <p class="panel error" id="cfg-warning" hidden>Chưa kết nối máy chủ: điền SUPABASE_URL và SUPABASE_ANON_KEY trong config.js.</p>
+
+  <!-- Đăng nhập -->
+  <section id="login" class="panel" hidden>
+    <h2>Đăng nhập</h2>
+    <p class="muted small">Dùng tài khoản đã được tạo trong Supabase (README, bước 3).</p>
+    <form id="f-login" class="row">
+      <label class="f">Email<input id="l-email" type="email" autocomplete="username" required></label>
+      <label class="f">Mật khẩu<input id="l-pass" type="password" autocomplete="current-password" required></label>
+      <button class="btn" type="submit">Đăng nhập</button>
+    </form>
+    <p class="error" id="l-error" role="alert"></p>
+  </section>
+
+  <section id="main" hidden>
+    <nav class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-tab="t-tickets">Mã vé</button>
+      <button role="tab" aria-selected="false" data-tab="t-done">Người hoàn thành</button>
+      <button role="tab" aria-selected="false" data-tab="t-draw">Tra mã rút thăm</button>
+      <button role="tab" aria-selected="false" data-tab="t-stats">Thống kê</button>
+    </nav>
+
+    <!-- Mã vé -->
+    <div class="tabpanel" id="t-tickets" role="tabpanel">
+      <div class="panel">
+        <h2>Tạo lô mã vé mới</h2>
+        <p class="muted small">Mỗi mã chơi được 1 lượt. Mã thử nghiệm chơi được cả ngoài thời gian mở cửa và không tính vào thống kê.</p>
+        <form id="f-create" class="row">
+          <label class="f">Số lượng<input id="c-count" type="number" min="1" max="2000" value="50" required></label>
+          <label class="f">Tên lô<input id="c-batch" type="text" placeholder="VD: Bàn bán vé 13/11" maxlength="60" required></label>
+          <label class="check"><input id="c-test" type="checkbox"> Mã thử nghiệm</label>
+          <button class="btn" type="submit">Tạo mã</button>
+        </form>
+        <p class="error" id="c-error" role="alert"></p>
+        <div id="c-result"></div>
+      </div>
+      <h2>Các lô đã tạo</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Lô</th><th>Loại</th><th>Tổng</th><th>Đã dùng</th><th>Tạo lúc</th><th></th></tr></thead>
+        <tbody id="b-body"></tbody>
+      </table></div>
+    </div>
+
+    <!-- Người hoàn thành -->
+    <div class="tabpanel" id="t-done" role="tabpanel" hidden>
+      <div class="row" style="margin:14px 0">
+        <button class="btn" type="button" id="d-mssv">Tải danh sách MSSV (mỗi MSSV một dòng)</button>
+        <button class="btn secondary" type="button" id="d-all">Tải toàn bộ mã hoàn thành</button>
+        <label class="check"><input id="d-test" type="checkbox"> Hiện cả lượt thử nghiệm</label>
+      </div>
+      <p class="muted small" id="d-summary"></p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Thời điểm</th><th>Họ tên</th><th>MSSV</th><th>Mã hoàn thành</th><th>Điểm</th><th>Rút thăm</th></tr></thead>
+        <tbody id="d-body"></tbody>
+      </table></div>
+    </div>
+
+    <!-- Tra mã rút thăm -->
+    <div class="tabpanel" id="t-draw" role="tabpanel" hidden>
+      <div class="panel">
+        <h2>Tra mã hoàn thành</h2>
+        <p class="muted small">Dùng khi rút thăm tại Workshop: nhập mã người trúng đọc lên để kiểm tra, rồi đánh dấu đã nhận.</p>
+        <form id="f-draw" class="row">
+          <label class="f">Mã hoàn thành<input id="r-code" type="text" placeholder="LC-XXXX-XXXX" autocomplete="off" required></label>
+          <button class="btn" type="submit">Kiểm tra</button>
+        </form>
+        <p class="error" id="r-error" role="alert"></p>
+        <div id="r-result"></div>
+      </div>
+    </div>
+
+    <!-- Thống kê -->
+    <div class="tabpanel" id="t-stats" role="tabpanel" hidden>
+      <div class="row" style="margin:14px 0"><button class="btn secondary" type="button" id="s-refresh">Làm mới</button></div>
+      <div class="stats" id="s-cards"></div>
+      <h2>Tỷ lệ chọn sai theo dạng ma túy</h2>
+      <p class="muted small">Dạng có tỷ lệ cao nên được nhấn mạnh trong Chuyên đề 2 của Workshop.</p>
+      <div class="panel" id="s-forms"></div>
+      <h2>Tình huống bị chọn sai nhiều nhất</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Tình huống</th><th>Lượt trả lời</th><th>Chọn sai</th><th>Tỷ lệ sai</th></tr></thead>
+        <tbody id="s-sit"></tbody>
+      </table></div>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+'use strict';
+const CFG = window.LUCID_CONFIG || {};
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const configured = !!(CFG.SUPABASE_URL && CFG.SUPABASE_ANON_KEY && !/YOUR-PROJECT/.test(CFG.SUPABASE_URL) && !/YOUR-ANON-KEY/.test(CFG.SUPABASE_ANON_KEY));
+const db = configured && window.supabase ? window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY) : null;
+const FORM_NAMES = {1: 'Dạng 1: pod chill (Etomidate)', 2: 'Dạng 2: thuốc lá, thảo mộc tẩm cần sa tổng hợp',
+  3: 'Dạng 3: bột pha đồ uống, “nước biển”', 4: 'Dạng 4: kẹo, bánh, socola, tem giấy', 5: 'Dạng 5: thuốc lắc, bột hồng'};
+const MSG = {LC_FORBIDDEN: 'Tài khoản này chưa có quyền quản trị.', LC_COUNT: 'Số lượng từ 1 đến 2.000 mã mỗi lần.',
+  LC_NOT_FOUND: 'Không tìm thấy mã hoàn thành này.'};
+
+const fmtTime = t => t ? new Date(t).toLocaleString('vi-VN', {timeZone: 'Asia/Ho_Chi_Minh', hour12: false}) : '';
+const fmtTicket = c => c.slice(0, 4) + '-' + c.slice(4);
+async function rpc(fn, args) {
+  const {data, error} = await db.rpc(fn, args || {});
+  if (error) { const k = (error.message.match(/LC_[A-Z_]+/) || [])[0]; throw new Error(MSG[k] || error.message); }
+  return data;
+}
+function csv(rows, cols) {
+  const c = v => { const s = v == null ? '' : String(v); return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  return '\uFEFF' + [cols.map(x => c(x[1])).join(','), ...rows.map(r => cols.map(x => c(typeof x[0] === 'function' ? x[0](r) : r[x[0]])).join(','))].join('\r\n');
+}
+function download(name, text) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], {type: 'text/csv;charset=utf-8'}));
+  a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+const stamp = () => new Date().toISOString().slice(0, 10);
+
+/* ---------- Đăng nhập ---------- */
+async function enter() {
+  const {data: {session}} = await db.auth.getSession();
+  if (!session) { $('#login').hidden = false; $('#main').hidden = true; $('#who').hidden = true; return; }
+  $('#who-email').textContent = session.user.email; $('#who').hidden = false;
+  let ok = false;
+  try { ok = await rpc('lc_is_admin'); } catch (e) {}
+  if (!ok) {
+    $('#login').hidden = false; $('#main').hidden = true;
+    $('#l-error').textContent = 'Tài khoản này chưa có quyền quản trị. Thêm email vào bảng lc_admins (README, bước 3).';
+    return;
+  }
+  $('#login').hidden = true; $('#main').hidden = false;
+  loadBatches();
+}
+$('#f-login').addEventListener('submit', async e => {
+  e.preventDefault(); $('#l-error').textContent = '';
+  const btn = $('button', e.target); btn.disabled = true;
+  const {error} = await db.auth.signInWithPassword({email: $('#l-email').value.trim(), password: $('#l-pass').value});
+  btn.disabled = false;
+  if (error) { $('#l-error').textContent = 'Sai email hoặc mật khẩu.'; return; }
+  enter();
+});
+$('#logout').addEventListener('click', async () => { await db.auth.signOut(); location.reload(); });
+
+/* ---------- Tab ---------- */
+$$('nav.tabs button').forEach(b => b.addEventListener('click', () => {
+  $$('nav.tabs button').forEach(x => x.setAttribute('aria-selected', String(x === b)));
+  $$('.tabpanel').forEach(p => { p.hidden = p.id !== b.dataset.tab; });
+  if (b.dataset.tab === 't-tickets') loadBatches();
+  if (b.dataset.tab === 't-done') loadDone();
+  if (b.dataset.tab === 't-stats') loadStats();
+}));
+
+/* ---------- Mã vé ---------- */
+function printCodes(codes, batch) {
+  const w = window.open('', '_blank');
+  if (!w) { alert('Trình duyệt chặn cửa sổ in. Cho phép cửa sổ bật lên rồi thử lại.'); return; }
+  w.document.write(`<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Mã vé ${esc(batch)}</title>
+  <style>body{font-family:Arial,sans-serif;margin:16px}h1{font-size:16px}.g{display:grid;grid-template-columns:repeat(4,1fr);gap:0}
+  .t{border:1px dashed #999;padding:14px 8px;text-align:center}.t b{display:block;font-size:22px;letter-spacing:2px}.t small{color:#555}
+  @media print{h1{display:none}}</style></head><body><h1>Lucid Cart – lô “${esc(batch)}” – ${codes.length} mã</h1><div class="g">
+  ${codes.map(c => `<div class="t"><small>Lucid Cart · 1 lượt chơi</small><b>${esc(fmtTicket(c))}</b><small>Nhập mã tại trang trò chơi</small></div>`).join('')}
+  </div><script>window.onload=()=>window.print()<\/script></body></html>`);
+  w.document.close();
+}
+$('#f-create').addEventListener('submit', async e => {
+  e.preventDefault(); $('#c-error').textContent = ''; $('#c-result').innerHTML = '';
+  const btn = $('button', e.target); btn.disabled = true;
+  const batch = $('#c-batch').value.trim(), test = $('#c-test').checked;
+  try {
+    const codes = await rpc('lc_admin_create_tickets', {p_count: Number($('#c-count').value), p_batch: batch, p_test: test});
+    const box = $('#c-result');
+    box.innerHTML = `<p class="ok">Đã tạo ${codes.length} mã${test ? ' thử nghiệm' : ''} trong lô “${esc(batch)}”.</p>
+      <div class="row"><button class="btn" type="button" id="c-print">In mã vé</button><button class="btn secondary" type="button" id="c-csv">Tải CSV</button></div>
+      <div class="codes">${codes.map(c => `<span>${esc(fmtTicket(c))}</span>`).join('')}</div>`;
+    $('#c-print').onclick = () => printCodes(codes, batch);
+    $('#c-csv').onclick = () => download(`ma-ve-${batch}-${stamp()}.csv`, csv(codes.map(c => ({code: fmtTicket(c)})), [['code', 'Mã vé']]));
+    loadBatches();
+  } catch (x) { $('#c-error').textContent = x.message; }
+  finally { btn.disabled = false; }
+});
+async function loadBatches() {
+  try {
+    const list = await rpc('lc_admin_batches');
+    $('#b-body').innerHTML = list.length ? list.map(b => `<tr><td>${esc(b.batch)}</td><td>${b.is_test ? 'Thử nghiệm' : 'Chính thức'}</td>
+      <td>${b.total}</td><td>${b.used}</td><td>${esc(fmtTime(b.created_at))}</td>
+      <td><button class="btn secondary" type="button" data-batch="${esc(b.batch)}" data-act="csv">CSV</button>
+          <button class="btn secondary" type="button" data-batch="${esc(b.batch)}" data-act="print">In mã chưa dùng</button></td></tr>`).join('')
+      : '<tr><td colspan="6" class="muted">Chưa có lô nào. Tạo lô đầu tiên ở trên.</td></tr>';
+  } catch (x) { $('#b-body').innerHTML = `<tr><td colspan="6" class="error">${esc(x.message)}</td></tr>`; }
+}
+$('#b-body').addEventListener('click', async e => {
+  const b = e.target.closest('button[data-batch]'); if (!b) return;
+  const batch = b.dataset.batch;
+  const list = await rpc('lc_admin_tickets', {p_batch: batch});
+  if (b.dataset.act === 'print') printCodes(list.filter(t => t.status === 'new').map(t => t.code), batch);
+  else download(`ma-ve-${batch}-${stamp()}.csv`, csv(list, [[r => fmtTicket(r.code), 'Mã vé'],
+    [r => ({new: 'Chưa dùng', playing: 'Đang chơi', used: 'Đã dùng'}[r.status]), 'Trạng thái'],
+    [r => fmtTime(r.used_at), 'Dùng lúc']]));
+});
+
+/* ---------- Người hoàn thành ---------- */
+let doneCache = [];
+async function loadDone() {
+  try {
+    doneCache = await rpc('lc_admin_completions', {p_include_test: $('#d-test').checked});
+    const uniq = new Set(doneCache.filter(r => r.mssv && !r.is_test).map(r => r.mssv));
+    $('#d-summary').textContent = `${doneCache.length} lượt hoàn thành, ${uniq.size} MSSV khác nhau (không tính thử nghiệm).`;
+    $('#d-body').innerHTML = doneCache.length ? doneCache.map(r => `<tr><td>${esc(fmtTime(r.created_at))}</td><td>${esc(r.full_name)}${r.is_test ? ' <span class="muted">(thử)</span>' : ''}</td>
+      <td>${esc(r.mssv || '')}</td><td><b>${esc(r.code)}</b></td><td>${r.score}</td><td>${r.redeemed ? 'Đã nhận' : ''}</td></tr>`).join('')
+      : '<tr><td colspan="6" class="muted">Chưa có ai hoàn thành.</td></tr>';
+  } catch (x) { $('#d-body').innerHTML = `<tr><td colspan="6" class="error">${esc(x.message)}</td></tr>`; }
+}
+$('#d-test').addEventListener('change', loadDone);
+$('#d-all').addEventListener('click', () => download(`hoan-thanh-${stamp()}.csv`, csv(doneCache, [
+  [r => fmtTime(r.created_at), 'Thời điểm'], ['full_name', 'Họ tên'], ['mssv', 'MSSV'], ['code', 'Mã hoàn thành'],
+  ['score', 'Điểm'], [r => (r.redeemed ? 'Đã nhận' : ''), 'Rút thăm'], [r => (r.is_test ? 'Thử nghiệm' : ''), 'Ghi chú']])));
+$('#d-mssv').addEventListener('click', () => {
+  const first = new Map();
+  [...doneCache].filter(r => r.mssv && !r.is_test).reverse().forEach(r => { if (!first.has(r.mssv)) first.set(r.mssv, r); });
+  download(`mssv-hoan-thanh-${stamp()}.csv`, csv([...first.values()], [['mssv', 'MSSV'], ['full_name', 'Họ tên'],
+    [r => fmtTime(r.created_at), 'Hoàn thành lần đầu lúc'], ['code', 'Mã hoàn thành']]));
+});
+
+/* ---------- Tra mã rút thăm ---------- */
+function drawResult(r) {
+  $('#r-result').innerHTML = `<div class="panel"><p><b>${esc(r.code)}</b>${r.is_test ? ' <span class="muted">(thử nghiệm)</span>' : ''}</p>
+    <p>${esc(r.full_name)}${r.mssv ? ' – MSSV ' + esc(r.mssv) : ''}<br><span class="muted small">Hoàn thành lúc ${esc(fmtTime(r.created_at))}</span></p>
+    ${r.redeemed ? `<p class="error">Mã này đã được dùng khi rút thăm lúc ${esc(fmtTime(r.redeemed_at))}.</p>`
+      : '<button class="btn" type="button" id="r-mark">Đánh dấu đã nhận giải</button>'}</div>`;
+  const m = $('#r-mark');
+  if (m) m.onclick = async () => { m.disabled = true; try { drawResult(await rpc('lc_admin_redeem', {p_code: r.code, p_mark: true})); } catch (x) { $('#r-error').textContent = x.message; } };
+}
+$('#f-draw').addEventListener('submit', async e => {
+  e.preventDefault(); $('#r-error').textContent = ''; $('#r-result').innerHTML = '';
+  try { drawResult(await rpc('lc_admin_redeem', {p_code: $('#r-code').value, p_mark: false})); }
+  catch (x) { $('#r-error').textContent = x.message; }
+});
+
+/* ---------- Thống kê ---------- */
+async function loadStats() {
+  try {
+    const s = await rpc('lc_admin_stats');
+    const ended = s.won + s.lost;
+    const cards = [['Mã vé đã tạo', s.tickets_total], ['Mã vé đã dùng', s.tickets_used], ['Lượt thắng', s.won],
+      ['Lượt thua', s.lost], ['Tỷ lệ thắng', ended ? Math.round(s.won * 100 / ended) + '%' : '–'],
+      ['MSSV đã hoàn thành', s.mssv_won], ['Đang chơi', s.playing], ['Bỏ dở', s.abandoned]];
+    $('#s-cards').innerHTML = cards.map(c => `<div class="stat"><span class="muted small">${c[0]}</span><b>${c[1]}</b></div>`).join('');
+    $('#s-forms').innerHTML = s.by_form.length ? s.by_form.map(f => {
+      const pct = f.answers ? Math.round(f.wrong * 100 / f.answers) : 0;
+      return `<div class="bar"><span>${esc(FORM_NAMES[f.form_type])}</span><div class="track" role="img" aria-label="${pct}% chọn sai"><div class="fill" style="width:${pct}%"></div></div><span class="num">${pct}%</span></div>`;
+    }).join('') : '<p class="muted">Chưa có dữ liệu.</p>';
+    $('#s-sit').innerHTML = s.by_situation.map(x => `<tr><td>${esc(x.situation_id)} – ${esc(x.title)}</td><td>${x.answers}</td><td>${x.wrong}</td>
+      <td>${x.answers ? Math.round(x.wrong * 100 / x.answers) : 0}%</td></tr>`).join('') || '<tr><td colspan="4" class="muted">Chưa có dữ liệu.</td></tr>';
+  } catch (x) { $('#s-cards').innerHTML = `<p class="error">${esc(x.message)}</p>`; }
+}
+$('#s-refresh').addEventListener('click', loadStats);
+
+if (!db) { $('#cfg-warning').hidden = false; return; }
+enter();
+})();
+</script>
+</body>
+</html>
