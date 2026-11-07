@@ -5,7 +5,7 @@
 window.LUCID_CONFIG = {
   // Supabase Dashboard → Project Settings → API
   SUPABASE_URL: 'https://ativmwqcwhazlzkcluyv.supabase.co'
-  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF0aXZtd3Fjd2hhemx6a2NsdXl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQwMDQ1MjQsImV4cCI6MjEwOTU4MDUyNH0.RmK8SlOmC4ON1GFftBi2SXhU9xA2AncngAVu54U50Vo'
+  SUPABASE_ANON_KEY: 'sb_publishable_PwUNlBFiLrNX5-TCt27e8Q_OLTiWDYa'
 
   // Tên hiển thị của Ban Tổ chức
   ORGANIZER: 'Ban Tổ chức',
